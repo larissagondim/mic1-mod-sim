@@ -66,6 +66,56 @@ mic1-simulator/
 
 Seguindo as especificações do projeto, quando o tradutor intercepta a instrução `BIPUSH byte`, a segunda microinstrução ativa os sinais `READ` e `WRITE` simultaneamente (`11`). O simulador desvia do fluxo tradicional da ULA, fazendo com que o registrador `H` absorva imediatamente os 8 bits mais significativos do `IR` (o argumento `byte`), estendendo-o com zeros.
 
+## Status do Projeto e Metas de Desenvolvimento
+
+O desenvolvimento do simulador foi planejado de forma incremental e modular. A tabela e o detalhamento abaixo registram o progresso atual do hardware simulado, o que já foi validado e o escopo pendente para a entrega final do projeto:
+
+### Quadro Geral de Progresso
+
+| Componente | Status | Validação |
+| :--- | :--- | :--- |
+| Etapa 1: Circuito da ULA | Concluído | `programa_etapa1.txt` |
+| Etapa 2: Caminho de Dados | Concluído | `programa_etapa2_tarefa2.txt` |
+| Etapa 3: Subsistema de Memória | Pendente | `microinstrucoes_etapa3_tarefa1.txt` |
+| Entregável: Interpretador IJVM | Pendente | `instrucoes.txt` |
+
+---
+
+### O Que Já Foi Feito (Etapas 1 e 2)
+
+**Fase 1: Núcleo Combinacional da ULA (`src/ALU.cpp`)**
+
+- Modificadores de entrada controlados pelas linhas de habilitação `ENA` e `ENB`.
+- Circuito inversor do barramento A controlado pela flag `INVA`.
+- Decodificador de funções lógicas para chaveamento das operações `AND`, `OR` e `NOT B`.
+- Somador completo de 32 bits com suporte ao sinal de incremento aritmético `INC` (Vem-um) e cálculo do Vai-um (`carryOut`).
+
+**Fase 2: Banco de Registradores e Barramentos (`src/Microarchitecture.cpp`)**
+
+- Alocação das variáveis físicas para os 9 registradores de 32 bits e o registrador `MBR` de 8 bits.
+- Decodificador de 4 bits para seleção do barramento B, com suporte à extensão de sinal para `MBR` e preenchimento com zeros para `MBRU`.
+- Seletor de 9 bits para barramento C, permitindo a escrita síncrona e simultânea do resultado em múltiplos registradores.
+- Implementação das flags `N` (Negativo) e `Z` (Zero) acopladas na saída do circuito de deslocamento.
+- Tratamento dos deslocamentos de hardware para 8 bits à esquerda (`SLL8`) e shift aritmético de 1 bit à direita (`SRA1`).
+
+---
+
+### O Que Falta Fazer (Etapa 3 e Entregável Final)
+
+**Fase 3: Subsistema de Memória RAM (A Implementar)**
+
+- Acoplamento do vetor de memória principal (`dataMemory`) com capacidade para armazenar palavras de dados de 32 bits.
+- Implementação dos métodos de leitura (`READ`) e escrita (`WRITE`) controlados por sinais de 2 bits vindos do `IR`.
+- Garantia de sincronização elétrica: ciclos de memória devem ocorrer estritamente após a escrita nos registradores do barramento C.
+- Ajuste do fatiador em `Decoder.hpp` para extrair e interpretar palavras de controle expandidas de 23 bits.
+
+**Fase 4: Compilador Dinâmico e Interpretador IJVM (A Implementar)**
+
+- Codificação das regras de substituição em `Translator.hpp` para converter strings em mnemônicos (`DUP`, `BIPUSH`, `ILOAD`) em microinstruções binárias.
+- Suporte ao laço dinâmico para a instrução `ILOAD x`, gerando `x` repetições de incrementos do registrador `H`.
+- Tratamento do caso especial de Fetch combinado para a instrução `BIPUSH byte`, injetando o operando direto em `H` quando `READ` e `WRITE` forem ativados simultaneamente (`11`).
+- Migração e unificação do loop de orquestração do `main.cpp` para ler o arquivo `instrucoes.txt` e despejar o log em português estruturado por tabulações.
+
 ---
 ## Roteiro de Desenvolvimento e Progresso do Projeto
 
