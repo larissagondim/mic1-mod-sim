@@ -117,6 +117,41 @@ Para garantir a precisão cirúrgica do simulador, o sistema foi homologado com 
 | **Etapa 3 (Memória)** | `microinstrucoes_etapa3_tarefa1.txt` | `dados_etapa3_tarefa1.txt` | `saida_etapa3_tarefa1.txt` | 100% Compatível |
 | **Final (Entregável)** | `instrucoes.txt` | Multi-Carga Etapa 3 | Log Unificado (Português) | Pronto para Avaliação |
 
+
+---
+
+## Extensões Futuras (Próximos Passos)
+
+Como o simulador foi concebido sob uma arquitetura estritamente modular e portável em C++, o sistema está preparado para receber evoluções incrementais. Abaixo estão listadas as frentes de engenharia de hardware e software planejadas para futuras versões do projeto:
+
+### 1. Expansão do Conjunto de Instruções (ISA IJVM Expandida)
+
+Atualmente focado no núcleo de manipulação de pilha (`DUP`, `BIPUSH`, `ILOAD`), o interpretador dinâmico do `Translator` pode ser expandido para suportar algoritmos aritméticos e de decisão completos através da injeção de novas sequências de microinstruções de 23 bits:
+
+- **Operações de Atribuição Avançada (`ISTORE x`)**: Implementação do ciclo inverso do carregamento, desempilhando o valor contido no topo da pilha (`TOS`) e persistindo-o no quadro local de variáveis indexado pelo registrador `LV` somado ao deslocamento `x`.
+
+- **Aritmética Direta de Hardware (`IADD` / `ISUB`)**: Suporte nativo para consumo dos dois operandos do topo da pilha. A subtração tirará proveito direto do controle combinacional da ULA através da ativação síncrona dos sinais de inversão `INVA = 1` e incremento do carry `INC = 1` (Complemento de Dois).
+
+- **Desvios Condicionais e Saltos (`IFEQ` / `GOTO`)**: Acoplamento do registrador `OPC` (Old Program Counter) para salvar o fluxo anterior e alteração direta do registrador `PC` com base no resultado das flags lógicas `flagZ` (Zero) e `flagN` (Negativo) geradas pela ULA.
+
+### 2. Interface Avançada de Depuração e Análise Visual (CLI Dashboard)
+
+Substituição da execução em lote silenciosa por um ambiente interativo de monitoramento no terminal:
+
+- **Modo de Execução Ciclo a Ciclo (Step-by-Step Execution)**: Inclusão de um interceptor de pulso de clock controlado por interrupção de teclado (`getchar()`). O usuário poderá avançar a execução microinstrução por microinstrução, permitindo inspecionar visualmente a dinâmica de propagação dos barramentos internos.
+
+- **Painel Estatístico de Performance (Métricas de Hardware)**: Geração de um relatório analítico ao final da execução computando métricas como o total de ciclos de clock consumidos, quantidade absoluta de acessos físicos à memória principal (leituras vs. escritas) e o cálculo do CPI Médio (Ciclos por Instrução) global do programa executado.
+
+- **Painel ASCII Dinâmico**: Renderização gráfica em modo texto no terminal atualizando em tempo real o chassi do caminho de dados da Mic-1, destacando quais registradores estão acoplados aos Barramentos B e C na janela de tempo do ciclo atual.
+
+### 3. Otimizações de Baixo Nível e Segurança de Hardware
+
+Aproveitar o controle absoluto de memória que o C++ oferece para blindar a simulação contra falhas de estouro:
+
+- **Proteção contra Estouro de Pilha (Stack Overflow / Underflow)**: Implementação de travas de hardware lógicas que analisam os limites físicos do registrador `SP` em relação à base `LV`, impedindo corrupção de dados na memória RAM simulada durante empilhamentos excessivos.
+
+- **Caching de Instruções de Alto Desempenho**: Substituição do reprocessamento de strings binárias por um sistema de decodificação prévia (*Pre-fetch Buffer*), onde as microinstruções textuais de 23 bits são compiladas imediatamente em estruturas numéricas compactas de bits (*bitfields* nativos do C++), minimizando o overhead de strings durante laços de repetição densos.
+
 ---
 
 ## Como Compilar e Executar
@@ -125,7 +160,9 @@ O projeto foi testado e homologado para ambientes Linux (como Ubuntu e Zorin OS)
 
 ### Pré-requisitos
 
-Certifique-se de ter o compilador GCC e a ferramenta Make instalados em sua distribuição:
+O projeto foi baseado pensando em ser executado em Linux, mas pode facilmente ser adaptado para outros SOs.
+
+Para compilar e executar em Linux, certifique-se de ter o compilador GCC e a ferramenta Make instalados em sua distribuição:
 
 ```bash
 sudo apt update
