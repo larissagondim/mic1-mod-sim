@@ -1,5 +1,5 @@
 /* Nome do arquivo: ALU.cpp
- * Autoria: Larissa Gondim, Laura Morais e Maria Luiza Uchoa
+ * Autoria: Larissa Gondim, Laura Morais, Maria Luiza Uchoa e Sérgio Gabriel
  * Data: 17/06/2026
  * Descrição: implementação das funções da ULA
  * Versão: 1.0

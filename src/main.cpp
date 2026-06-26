@@ -1,3 +1,10 @@
+/* Nome do arquivo: main.cpp
+ * Autoria: Larissa Gondim, Laura Morais, Maria Luiza Uchoa e Sérgio Gabriel
+ * Data: 26/06/2026
+ * Descrição: simulação da arquitetura do MIC-1
+ * Versão: 1.1
+ */
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -65,7 +72,63 @@ std::string getCBusNames(uint16_t selection) {
     return names;
 }
 
+/**
+ * @brief Executa a simulação específica da etapa 1, que é a validação da ULA isolada.
+ * Lê o arquivo programa_etapa1.txt de 6 bits e gera o log saida_etapa1.txt.
+ */
+void simularEtapa1() {
+    std::ifstream instFile("dados/etapa1/programa_etapa1.txt");
+    std::ofstream logFile("dados/etapa1/saida_etapa1.txt");
+
+    if (!instFile.is_open() || !logFile.is_open()) {
+        std::cerr << "Erro ao abrir os arquivos da Etapa 1.\n";
+        return;
+    }
+
+    // Especificação da etapa 1: varoáveis para A, B, PC e IR
+    uint32_t A = 1;
+    uint32_t B = 1;
+    uint32_t PC = 1;
+    std::string IR;
+
+    logFile << "Simulacao da Etapa 1 - Teste da ULA\n";
+    logFile << "Valores iniciais: A = " << A << ", B = " << B << "\n\n";
+
+    while (std::getline(instFile, IR)) {
+        if (IR.empty()) continue;
+
+        // Decodificação da palavra de 6 bits: F0 F1 ENA ENB INVA INC
+        uint8_t f0   = IR[0] - '0';
+        uint8_t f1   = IR[1] - '0';
+        uint8_t ena  = IR[2] - '0';
+        uint8_t enb  = IR[3] - '0';
+        uint8_t inva = IR[4] - '0';
+        uint8_t inc  = IR[5] - '0';
+
+        // Execução da ULA combinacional (sem shifts da Etapa 2)
+        ALUResult alu_out = ALU::execute(A, B, f0, f1, ena, enb, inva, inc, 0, 0);
+
+        // Registro no log conforme exigência da etapa 1: IR, PC, A, B, S e Vai-um
+        logFile << "Linha " << PC << " (PC = " << PC << "):\n";
+        logFile << "\tIR = " << IR << "\n";
+        logFile << "\tPC = " << PC << "\n";
+        logFile << "\tA = " << toBinStr(A, 32) << " (" << static_cast<int32_t>(A) << ")\n";
+        logFile << "\tB = " << toBinStr(B, 32) << " (" << static_cast<int32_t>(B) << ")\n";
+        logFile << "\tS = " << toBinStr(alu_out.result, 32) << " (" << static_cast<int32_t>(alu_out.result) << ")\n";
+        logFile << "\tVai-um = " << static_cast<int>(alu_out.carryOut) << "\n\n";
+
+        PC++;
+    }
+
+    logFile << "Fim da simulacao da Etapa 1.\n";
+    instFile.close();
+    logFile.close();
+    std::cout << "Simulacao da Etapa 1 concluida com sucesso! Log gerado em dados/etapa1/saida_etapa1.txt\n";
+}
+
 int main() {
+    simularEtapa1();
+    
     Microarchitecture cpu;
     
     // Configura os caminhos dos arquivos locais conforme a estrutura de diretórios do repositório
@@ -82,7 +145,7 @@ int main() {
     std::string ijvmLine;
     int cycle = 1;
 
-    // --- LOG: IMPRESSÃO DO ESTADO INICIAL DO SISTEMA ---
+    // Log: impressão do estado inicial do sistema
     logFile << "Estado Inicial da Memoria:\n";
     for (uint32_t word : cpu.dataMemory) {
         logFile << "\t" << toBinStr(word, 32) << "\n";
@@ -131,7 +194,7 @@ int main() {
             logFile << "\t\tcpp = " << toBinStr(cpu.cpp, 32) << "\n\t\ttos = " << toBinStr(cpu.tos, 32) << "\n";
             logFile << "\t\topc = " << toBinStr(cpu.opc, 32) << "\n\t\th   = " << toBinStr(cpu.h, 32)   << "\n";
 
-            // --- INÍCIO DO CLOCK COMBINACIONAL (Simulação Física) ---
+            // INÍCIO DO CLOCK COMBINACIONAL (Simulação física)
             uint32_t b_bus_value = cpu.readB_Bus(busBSelection);
             ALUResult alu_out;
 
@@ -161,7 +224,7 @@ int main() {
             if (!(readSignal == 1 && writeSignal == 1)) {
                 cpu.executeMemoryCycle(readSignal, writeSignal);
             }
-            // --- FIM DO CICLO DE CLOCK ---
+            // FIM DO CICLO DE CLOCK
 
             // LOG: Amostragem dos 10 registradores DEPOIS da execução e escrita nos barramentos
             logFile << "\tRegistradores apos a instrucao:\n";

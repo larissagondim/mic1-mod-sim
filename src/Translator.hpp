@@ -1,5 +1,5 @@
 /* Nome do arquivo: Translator.hpp
- * Autoria: Larissa Gondim, Laura Morais e Maria Luiza Uchoa
+ * Autoria: Larissa Gondim, Laura Morais, Maria Luiza Uchoa e Sérgio Gabriel
  * Data: 18/06/2026
  * Descrição: protótipo do Translator
  * Versão: 1.0

@@ -9,6 +9,7 @@ Projeto desenvolvido como requisito para a **Segunda Avaliação** da disciplina
 - **Larissa Gondim**
 - **Laura Morais**
 - **Maria Luiza Uchoa**
+- **Sérgio Gabriel**
 
 ## Professora
 
@@ -22,6 +23,13 @@ Projeto desenvolvido como requisito para a **Segunda Avaliação** da disciplina
 mic1-simulator/
 │
 ├── dados/                                 # Arquivos textuais de entrada e teste
+│   ├── etapa1/
+│   │   ├── programa_etapa1.txt            # Entrada de 6 bits para testes da ULA
+│   │   └── saida_etapa1.txt               # Log gerado com os resultados da Etapa 1
+│   ├── etapa2/
+│   │   ├── programa_etapa2_tarefa1.txt    # Entrada de 8 bits
+│   │   ├── programa_etapa2_tarefa2.txt    # Entrada de 21 bits para teste de barramentos
+│   │   └── registradores_etapa2_tarefa2.txt # Estado inicial dos registradores
 │   └── etapa3/
 │       ├── dados_etapa3_tarefa1.txt       # Estado inicial da memória RAM
 │       ├── registradores_etapa3_tarefa1.txt # Estado inicial dos registradores
@@ -34,7 +42,8 @@ mic1-simulator/
 │   ├── Microarchitecture.cpp              # Implementação de barramentos e ciclos de clock
 │   ├── Decoder.hpp                        # Fatiador de instruções de 23 bits
 │   ├── Translator.hpp                     # Tradutor/Compilador dinâmico de IJVM para microcódigo
-│   └── main.cpp                           # Orquestrador do loop de clock e geração do Log
+│   ├── main.cpp                           # Orquestrador do loop de clock e geração do Log
+│   └── PASSO-A-PASSO.md                   # Visão geral e funcionamento detalhado do sistema
 │
 ├── Makefile                               # Automação de compilação do GCC
 └── README.md                              # Documentação do projeto
@@ -66,9 +75,7 @@ mic1-simulator/
 
 Seguindo as especificações do projeto, quando o tradutor intercepta a instrução `BIPUSH byte`, a segunda microinstrução ativa os sinais `READ` e `WRITE` simultaneamente (`11`). O simulador desvia do fluxo tradicional da ULA, fazendo com que o registrador `H` absorva imediatamente os 8 bits mais significativos do `IR` (o argumento `byte`), estendendo-o com zeros.
 
-## Status do Projeto e Metas de Desenvolvimento
-
-O desenvolvimento do simulador foi planejado de forma incremental e modular. A tabela e o detalhamento abaixo registram o progresso atual do hardware simulado, o que já foi validado e o escopo pendente para a entrega final do projeto:
+## Status do Projeto
 
 ### Quadro Geral de Progresso
 
@@ -76,8 +83,8 @@ O desenvolvimento do simulador foi planejado de forma incremental e modular. A t
 | :--- | :--- | :--- |
 | Etapa 1: Circuito da ULA | Concluído | `programa_etapa1.txt` |
 | Etapa 2: Caminho de Dados | Concluído | `programa_etapa2_tarefa2.txt` |
-| Etapa 3: Subsistema de Memória | Pendente | `microinstrucoes_etapa3_tarefa1.txt` |
-| Entregável: Interpretador IJVM | Pendente | `instrucoes.txt` |
+| Etapa 3: Subsistema de Memória | Concluído | `microinstrucoes_etapa3_tarefa1.txt` |
+| Entregável: Interpretador IJVM | Concluído | `instrucoes.txt` |
 
 ---
 
@@ -100,21 +107,21 @@ O desenvolvimento do simulador foi planejado de forma incremental e modular. A t
 
 ---
 
-### O Que Falta Fazer (Etapa 3 e Entregável Final)
+### O Que Foi Feito (Etapa 3 e Entregável Final)
 
-**Fase 3: Subsistema de Memória RAM (A Implementar)**
+**Fase 3: Subsistema de Memória RAM (`src/Microarchitecture.cpp`)**
 
 - Acoplamento do vetor de memória principal (`dataMemory`) com capacidade para armazenar palavras de dados de 32 bits.
 - Implementação dos métodos de leitura (`READ`) e escrita (`WRITE`) controlados por sinais de 2 bits vindos do `IR`.
-- Garantia de sincronização elétrica: ciclos de memória devem ocorrer estritamente após a escrita nos registradores do barramento C.
+- Garantia de sincronização elétrica: ciclos de memória ocorrem estritamente após a escrita nos registradores do barramento C.
 - Ajuste do fatiador em `Decoder.hpp` para extrair e interpretar palavras de controle expandidas de 23 bits.
 
-**Fase 4: Compilador Dinâmico e Interpretador IJVM (A Implementar)**
+**Fase 4: Compilador Dinâmico e Interpretador IJVM (`src/Translator.hpp` e `src/main.cpp`)**
 
 - Codificação das regras de substituição em `Translator.hpp` para converter strings em mnemônicos (`DUP`, `BIPUSH`, `ILOAD`) em microinstruções binárias.
 - Suporte ao laço dinâmico para a instrução `ILOAD x`, gerando `x` repetições de incrementos do registrador `H`.
 - Tratamento do caso especial de Fetch combinado para a instrução `BIPUSH byte`, injetando o operando direto em `H` quando `READ` e `WRITE` forem ativados simultaneamente (`11`).
-- Migração e unificação do loop de orquestração do `main.cpp` para ler o arquivo `instrucoes.txt` e despejar o log em português estruturado por tabulações.
+- Orquestração unificada no `main.cpp`, executando primeiro a simulação autônoma da Etapa 1 (`saida_etapa1.txt`) e em seguida o interpretador IJVM completo (`saida_etapa3_tarefa1.txt`), com logs estruturados por tabulações em português.
 
 ---
 ## Roteiro de Desenvolvimento e Progresso do Projeto
@@ -236,17 +243,22 @@ Dentro da pasta raiz do projeto, você pode gerenciar a execução através dos 
    ```
 
 3. **Limpar o ambiente de build:**
-   Apaga o executável e limpa logs residuais antigos de execuções anteriores.
+   Apaga o executável e limpa logs residuais antigos de execuções anteriores (`saida_etapa1.txt` e `saida_etapa3_tarefa1.txt`).
    ```bash
    make clean
    ```
 
 ---
 
-## Formato do Log de Saída
+## Formato dos Logs de Saída
 
-Ao rodar a simulação, o arquivo de saída será gerado em **português** no caminho `dados/etapa3/saida_etapa3_tarefa1.txt`. O arquivo utiliza recuos de tabulação (`\t`) para uma visualização clara e legível da hierarquia de hardware:
+Ao rodar a simulação, dois arquivos de saída serão gerados em **português** utilizando recuos de tabulação (`\t`) para uma visualização clara e legível da hierarquia de hardware:
 
+### 1. Log da Etapa 1 (`dados/etapa1/saida_etapa1.txt`)
+- Registra a validação isolada da ULA combinacional.
+- Para cada instrução de 6 bits executada, anota de forma limpa: `IR`, `PC`, `A`, `B`, `S` (Resultado final) e `Vai-um`.
+
+### 2. Log da Etapa 3 (`dados/etapa3/saida_etapa3_tarefa1.txt`)
 - Estado inicial completo da memória RAM e de todos os 10 registradores.
 - **Por Ciclo de Execução:**
   - Palavra do Registrador de Instrução (`ir`) desmembrada.

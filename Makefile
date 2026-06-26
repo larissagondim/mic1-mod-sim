@@ -26,6 +26,7 @@ $(TARGET): $(SRCS)
 # Regra para limpar os arquivos gerados de build e logs antigos
 clean:
 	rm -f $(TARGET)
+	rm -f dados/etapa1/saida_etapa1.txt
 	rm -f dados/etapa3/saida_etapa3_tarefa1.txt
 
 # Regra para compilar e rodar o simulador logo em sequência
