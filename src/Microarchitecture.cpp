@@ -2,7 +2,7 @@
  * Autoria: Larissa Gondim, Laura Morais, Maria Luiza Uchoa e Sérgio Gabriel
  * Data: 18/06/2026
  * Descrição: implementação das funções da Microarquitetura
- * Versão: 1.0
+ * Versão: 1.1
  */
 
 #include "Microarchitecture.hpp"
@@ -19,20 +19,46 @@ void Microarchitecture::loadRegisters(const std::string& filepath) {
     std::ifstream file(filepath);
     std::string line;
 
-    // Ordem fixa do arquivo de estado inicial (um valor binario por linha):
-    // H, OPC, TOS, CPP, LV, SP, PC, MDR, MAR e, por fim, MBR (8 bits).
+    // Ordem fixa para fallback do arquivo antigo:
     uint32_t* ordem[] = {&h, &opc, &tos, &cpp, &lv, &sp, &pc, &mdr, &mar};
     size_t idx = 0;
 
     while (std::getline(file, line)) {
         if (line.empty()) continue;
 
-        if (idx < 9) {
-            *ordem[idx] = std::stoul(line, nullptr, 2); // registradores de 32 bits
-        } else if (idx == 9) {
-            mbr = static_cast<uint8_t>(std::stoul(line, nullptr, 2)); // MBR de 8 bits
+        size_t equalPos = line.find('=');
+        if (equalPos != std::string::npos) {
+            std::string name = line.substr(0, equalPos);
+            std::string valueStr = line.substr(equalPos + 1);
+
+            // Remove espaços em branco
+            name.erase(0, name.find_first_not_of(" \t"));
+            name.erase(name.find_last_not_of(" \t") + 1);
+            valueStr.erase(0, valueStr.find_first_not_of(" \t"));
+            valueStr.erase(valueStr.find_last_not_of(" \t") + 1);
+
+            uint32_t val = std::stoul(valueStr, nullptr, 2);
+            if (name == "mar") mar = val;
+            else if (name == "mdr") mdr = val;
+            else if (name == "pc") pc = val;
+            else if (name == "sp") sp = val;
+            else if (name == "lv") lv = val;
+            else if (name == "cpp") cpp = val;
+            else if (name == "tos") tos = val;
+            else if (name == "opc") opc = val;
+            else if (name == "h") h = val;
+            else if (name == "mbr") mbr = static_cast<uint8_t>(val);
+        } else {
+            // Suporte ao formato antigo (apenas valores binários em ordem)
+            line.erase(0, line.find_first_not_of(" \t"));
+            line.erase(line.find_last_not_of(" \t") + 1);
+            if (idx < 9) {
+                *ordem[idx] = std::stoul(line, nullptr, 2);
+            } else if (idx == 9) {
+                mbr = static_cast<uint8_t>(std::stoul(line, nullptr, 2));
+            }
+            idx++;
         }
-        idx++;
     }
 }
 

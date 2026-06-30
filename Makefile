@@ -30,6 +30,7 @@ clean:
 	rm -f dados/etapa2/saida_etapa2_tarefa1.txt
 	rm -f dados/etapa2/saida_etapa2_tarefa2.txt
 	rm -f dados/etapa3/saida_etapa3_tarefa1.txt
+	rm -f dados/etapa3/saida_entregavel.txt
 
 # Regra para compilar e rodar o simulador logo em sequência
 run: all

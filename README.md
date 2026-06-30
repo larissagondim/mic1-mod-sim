@@ -35,8 +35,10 @@ mic1-simulator/
 │   └── etapa3/
 │       ├── dados_etapa3_tarefa1.txt       # Estado inicial da memória RAM
 │       ├── registradores_etapa3_tarefa1.txt # Estado inicial dos registradores
+│       ├── microinstrucoes_etapa3_tarefa1.txt # Microinstruções de 23 bits (fornecido pelo professor)
 │       ├── instrucoes.txt                 # Instruções em alto nível da IJVM (Entrada)
-│       └── saida_etapa3_tarefa1.txt       # Log gerado com os resultados da Etapa 3
+│       ├── saida_etapa3_tarefa1.txt       # Log gerado pela Tarefa 1 (microinstruções)
+│       └── saida_entregavel.txt           # Log gerado pelo Entregável Final (IJVM)
 │
 ├── src/                                   # Código-fonte do simulador em C++
 │   ├── ALU.hpp                            # Definição do bloco combinacional (ULA e Shifter)
@@ -86,7 +88,7 @@ Seguindo as especificações do projeto, quando o tradutor intercepta a instruç
 | :--- | :--- | :--- |
 | Etapa 1: Circuito da ULA | Concluído | `programa_etapa1.txt` |
 | Etapa 2: Caminho de Dados | Concluído | `programa_etapa2_tarefa2.txt` |
-| Etapa 3: Subsistema de Memória | Concluído | `instrucoes.txt` |
+| Etapa 3: Subsistema de Memória (Tarefa 1) | Concluído | `microinstrucoes_etapa3_tarefa1.txt` |
 | Entregável: Interpretador IJVM | Concluído | `instrucoes.txt` |
 
 ---
@@ -125,7 +127,9 @@ Seguindo as especificações do projeto, quando o tradutor intercepta a instruç
 - Suporte ao laço dinâmico para a instrução `ILOAD x`, gerando `x` repetições de incrementos do registrador `H`.
 - Tratamento do caso especial de Fetch combinado para a instrução `BIPUSH byte`, passando o operando pelo registrador `MBR` e injetando em `H` quando `READ` e `WRITE` forem ativados simultaneamente (`11`).
 - Correção de mapeamentos bit a bit de todos os barramentos (B e C), controle de ULA e controle de Memória (READ/WRITE) nas microinstruções dinâmicas, garantindo precisão total de leitura e escrita.
-- Orquestração unificada no `main.cpp`, executando primeiro a simulação autônoma da Etapa 1 (`saida_etapa1.txt`) e em seguida o interpretador IJVM completo (`saida_etapa3_tarefa1.txt`), com logs estruturados por tabulações em português.
+- Extração da função auxiliar `executarMicroinstrucao()` que encapsula a decodificação, execução combinacional e logging de uma microinstrução de 23 bits, reutilizada pela Tarefa 1 e pelo Entregável.
+- Implementação da função `simularEtapa3Tarefa1()` para leitura direta de microinstruções de 23 bits de arquivo externo, com dump de memória após cada microinstrução.
+- Orquestração unificada no `main.cpp`, executando sequencialmente: Etapa 1, Etapa 2 (Tarefas 1 e 2), Entregável IJVM (`saida_entregavel.txt`) e Etapa 3 Tarefa 1 (`saida_etapa3_tarefa1.txt`), com logs estruturados por tabulações em português.
 
 ---
 ## Roteiro de Desenvolvimento e Progresso do Projeto
@@ -175,43 +179,13 @@ Para garantir a precisão cirúrgica do simulador, o sistema foi homologado com 
 | :--- | :--- | :--- | :--- | :--- |
 | **Etapa 1 (ULA)** | `programa_etapa1.txt` | N/A | `saida_etapa1.txt` | 100% Compatível |
 | **Etapa 2 (Caminho)** | `programa_etapa2_tarefa2.txt` | `registradores_etapa2_tarefa2.txt` | `saida_etapa2_tarefa2.txt` | 100% Compatível |
-| **Etapa 3 (Memória)** | `instrucoes.txt` | `dados_etapa3_tarefa1.txt` | `saida_etapa3_tarefa1.txt` | 100% Compatível |
-| **Final (Entregável)** | `instrucoes.txt` | Multi-Carga Etapa 3 | `saida_etapa3_tarefa1.txt` | Pronto para Avaliação |
+| **Etapa 3 (Tarefa 1)** | `microinstrucoes_etapa3_tarefa1.txt` | `dados/registradores_etapa3_tarefa1.txt` | `saida_etapa3_tarefa1.txt` | Aguardando Arquivo |
+| **Final (Entregável)** | `instrucoes.txt` | `dados_etapa3_tarefa1.txt` | `saida_entregavel.txt` | Pronto para Avaliação |
 
 
 ---
 
-## Extensões Futuras (Próximos Passos)
 
-Como o simulador foi concebido sob uma arquitetura estritamente modular e portável em C++, o sistema está preparado para receber evoluções incrementais. Abaixo estão listadas as frentes de engenharia de hardware e software planejadas para futuras versões do projeto:
-
-### 1. Expansão do Conjunto de Instruções (ISA IJVM Expandida)
-
-Atualmente focado no núcleo de manipulação de pilha (`DUP`, `BIPUSH`, `ILOAD`), o interpretador dinâmico do `Translator` pode ser expandido para suportar algoritmos aritméticos e de decisão completos através da injeção de novas sequências de microinstruções de 23 bits:
-
-- **Operações de Atribuição Avançada (`ISTORE x`)**: Implementação do ciclo inverso do carregamento, desempilhando o valor contido no topo da pilha (`TOS`) e persistindo-o no quadro local de variáveis indexado pelo registrador `LV` somado ao deslocamento `x`.
-
-- **Aritmética Direta de Hardware (`IADD` / `ISUB`)**: Suporte nativo para consumo dos dois operandos do topo da pilha. A subtração tirará proveito direto do controle combinacional da ULA através da ativação síncrona dos sinais de inversão `INVA = 1` e incremento do carry `INC = 1` (Complemento de Dois).
-
-- **Desvios Condicionais e Saltos (`IFEQ` / `GOTO`)**: Acoplamento do registrador `OPC` (Old Program Counter) para salvar o fluxo anterior e alteração direta do registrador `PC` com base no resultado das flags lógicas `flagZ` (Zero) e `flagN` (Negativo) geradas pela ULA.
-
-### 2. Interface Avançada de Depuração e Análise Visual (CLI Dashboard)
-
-Substituição da execução em lote silenciosa por um ambiente interativo de monitoramento no terminal:
-
-- **Modo de Execução Ciclo a Ciclo (Step-by-Step Execution)**: Inclusão de um interceptor de pulso de clock controlado por interrupção de teclado (`getchar()`). O usuário poderá avançar a execução microinstrução por microinstrução, permitindo inspecionar visualmente a dinâmica de propagação dos barramentos internos.
-
-- **Painel Estatístico de Performance (Métricas de Hardware)**: Geração de um relatório analítico ao final da execução computando métricas como o total de ciclos de clock consumidos, quantidade absoluta de acessos físicos à memória principal (leituras vs. escritas) e o cálculo do CPI Médio (Ciclos por Instrução) global do programa executado.
-
-- **Painel ASCII Dinâmico**: Renderização gráfica em modo texto no terminal atualizando em tempo real o chassi do caminho de dados da Mic-1, destacando quais registradores estão acoplados aos Barramentos B e C na janela de tempo do ciclo atual.
-
-### 3. Otimizações de Baixo Nível e Segurança de Hardware
-
-Aproveitar o controle absoluto de memória que o C++ oferece para blindar a simulação contra falhas de estouro:
-
-- **Proteção contra Estouro de Pilha (Stack Overflow / Underflow)**: Implementação de travas de hardware lógicas que analisam os limites físicos do registrador `SP` em relação à base `LV`, impedindo corrupção de dados na memória RAM simulada durante empilhamentos excessivos.
-
-- **Caching de Instruções de Alto Desempenho**: Substituição do reprocessamento de strings binárias por um sistema de decodificação prévia (*Pre-fetch Buffer*), onde as microinstruções textuais de 23 bits são compiladas imediatamente em estruturas numéricas compactas de bits (*bitfields* nativos do C++), minimizando o overhead de strings durante laços de repetição densos.
 
 ---
 
@@ -247,7 +221,7 @@ Dentro da pasta raiz do projeto, você pode gerenciar a execução através dos 
    ```
 
 3. **Limpar o ambiente de build:**
-   Apaga o executável e limpa logs residuais antigos de execuções anteriores (`saida_etapa1.txt`, `saida_etapa2_tarefa1.txt`, `saida_etapa2_tarefa2.txt` e `saida_etapa3_tarefa1.txt`).
+   Apaga o executável e limpa todos os logs residuais de execuções anteriores (`saida_etapa1.txt`, `saida_etapa2_tarefa1.txt`, `saida_etapa2_tarefa2.txt`, `saida_etapa3_tarefa1.txt` e `saida_entregavel.txt`).
    ```bash
    make clean
    ```
@@ -256,7 +230,7 @@ Dentro da pasta raiz do projeto, você pode gerenciar a execução através dos 
 
 ## Formato dos Logs de Saída
 
-Ao rodar a simulação, quatro arquivos de saída serão gerados em **português** utilizando recuos de tabulação (`\t`) para uma visualização clara e legível da hierarquia de hardware:
+Ao rodar a simulação, quatro arquivos de saída serão gerados em **português** com alinhamento rigoroso e fixo para uma visualização clara e padronizada do estado do hardware:
 
 ### 1. Log da Etapa 1 (`dados/etapa1/saida_etapa1.txt`)
 - Registra a validação isolada da ULA combinacional.
@@ -266,12 +240,23 @@ Ao rodar a simulação, quatro arquivos de saída serão gerados em **português
 - **Tarefa 1 (`dados/etapa2/saida_etapa2_tarefa1.txt`)**: Registra a simulação da ULA de 8 bits, demonstrando saídas deslocadas e o status das flags `N` e `Z`.
 - **Tarefa 2 (`dados/etapa2/saida_etapa2_tarefa2.txt`)**: Registra o comportamento do caminho de dados e registradores com instruções de 21 bits.
 
-### 3. Log da Etapa 3 (`dados/etapa3/saida_etapa3_tarefa1.txt`)
+### 3. Log da Etapa 3 - Tarefa 1 (`dados/etapa3/saida_etapa3_tarefa1.txt`)
+- Gerado pela função `simularEtapa3Tarefa1()` ao ler microinstruções de 23 bits diretamente do arquivo `microinstrucoes_etapa3_tarefa1.txt` (fornecido pelo professor).
 - Estado inicial completo da memória RAM e de todos os 10 registradores.
-- **Por Ciclo de Execução:**
+- **Por Microinstrução Executada:**
   - Palavra do Registrador de Instrução (`ir`) desmembrada.
   - Estado do chaveamento dos Barramentos B e C.
   - Estado de todos os 10 registradores **antes** do clock combinacional.
   - Estado de todos os 10 registradores atualizados **após** a borda de subida do clock.
+  - Dump completo das 8 linhas da memória RAM após cada microinstrução.
+- **Nota:** Se o arquivo de entrada não estiver presente, a simulação é ignorada com uma mensagem amigável.
+
+### 4. Log do Entregável Final (`dados/etapa3/saida_entregavel.txt`)
+- Gerado pela função `simularEntregavel()` ao interpretar macroinstruções IJVM (`DUP`, `BIPUSH`, `ILOAD`) do arquivo `instrucoes.txt`.
+- Estado inicial completo da memória RAM e de todos os 10 registradores.
+- **Por Ciclo de Execução (Microinstrução):**
+  - Palavra do Registrador de Instrução (`ir`) desmembrada.
+  - Estado do chaveamento dos Barramentos B e C.
+  - Estado de todos os 10 registradores **antes** e **após** o clock combinacional.
 - **Ao Final de Cada Macroinstrução:**
   - Dump completo das 8 linhas da memória RAM para validação final do estado após a instrução IJVM completa.

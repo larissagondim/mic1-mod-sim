@@ -2,7 +2,7 @@
  * Autoria: Larissa Gondim, Laura Morais, Maria Luiza Uchoa e Sérgio Gabriel
  * Data: 26/06/2026
  * Descrição: simulação da arquitetura do MIC-1
- * Versão: 1.1
+ * Versão: 1.2
  */
 
 #include <iostream>
@@ -187,12 +187,17 @@ void simularEtapa2Tarefa1() {
 /**
  * @brief Imprime no log o estado dos 10 registradores da Mic-1 com a indentação informada.
  */
-void dumpRegistradores(std::ofstream& logFile, const Microarchitecture& cpu, const std::string& tab) {
-    logFile << tab << "h   = " << toBinStr(cpu.h, 32)   << "\n" << tab << "opc = " << toBinStr(cpu.opc, 32) << "\n";
-    logFile << tab << "tos = " << toBinStr(cpu.tos, 32) << "\n" << tab << "cpp = " << toBinStr(cpu.cpp, 32) << "\n";
-    logFile << tab << "lv  = " << toBinStr(cpu.lv, 32)  << "\n" << tab << "sp  = " << toBinStr(cpu.sp, 32)  << "\n";
-    logFile << tab << "mbr = " << toBinStr(cpu.mbr, 8)  << "\n" << tab << "pc  = " << toBinStr(cpu.pc, 32)  << "\n";
-    logFile << tab << "mdr = " << toBinStr(cpu.mdr, 32) << "\n" << tab << "mar = " << toBinStr(cpu.mar, 32) << "\n";
+void dumpRegistradores(std::ofstream& logFile, const Microarchitecture& cpu) {
+    logFile << "h   = " << toBinStr(cpu.h, 32) << "\n";
+    logFile << "opc = " << toBinStr(cpu.opc, 32) << "\n";
+    logFile << "tos = " << toBinStr(cpu.tos, 32) << "\n";
+    logFile << "cpp = " << toBinStr(cpu.cpp, 32) << "\n";
+    logFile << "lv  = " << toBinStr(cpu.lv, 32) << "\n";
+    logFile << "sp  = " << toBinStr(cpu.sp, 32) << "\n";
+    logFile << "mbr = " << toBinStr(cpu.mbr, 8)  << "\n";
+    logFile << "pc  = " << toBinStr(cpu.pc, 32)  << "\n";
+    logFile << "mdr = " << toBinStr(cpu.mdr, 32) << "\n";
+    logFile << "mar = " << toBinStr(cpu.mar, 32) << "\n";
 }
 
 /**
@@ -216,7 +221,7 @@ void simularEtapa2Tarefa2() {
     logFile << "Formato da instrucao: Controle da ULA (8) | Barramento C (9) | Barramento B (4)\n";
 
     logFile << "\nEstado Inicial dos Registradores:\n";
-    dumpRegistradores(logFile, cpu, "\t");
+    dumpRegistradores(logFile, cpu);
 
     std::string IR;
     int cycle = 1;
@@ -230,13 +235,15 @@ void simularEtapa2Tarefa2() {
         // Fatiamento da instrução de 21 bits (sem campo de memória)
         Decoder::split21Bits(IR, ulaControl, busCSelection, busBSelection);
 
-        logFile << "\nInstrucao " << cycle << "\n";
-        logFile << "\tir = " << IR.substr(0, 8) << " " << IR.substr(8, 9) << " " << IR.substr(17, 4) << "\n";
-        logFile << "\tbarramento B = " << getBBusName(busBSelection) << "\n";
-        logFile << "\tbarramento C = " << getCBusNames(busCSelection) << "\n";
+        logFile << "\n============================================================\n";
+        logFile << "Ciclo " << cycle << "\n";
+        logFile << "ir = " << IR.substr(0, 8) << " " << IR.substr(8, 9) << " " << IR.substr(17, 4) << "\n";
+        logFile << "b = " << getBBusName(busBSelection) << "\n";
+        logFile << "c = " << getCBusNames(busCSelection) << "\n";
 
-        logFile << "\tRegistradores antes da instrucao:\n";
-        dumpRegistradores(logFile, cpu, "\t\t");
+        logFile << "*******************************\n";
+        logFile << "> Registradores antes da instrução\n";
+        dumpRegistradores(logFile, cpu);
 
         // Caminho de dados: A = H sempre; B = registrador no barramento B
         uint32_t b_bus_value = cpu.readB_Bus(busBSelection);
@@ -255,8 +262,9 @@ void simularEtapa2Tarefa2() {
         // Escrita da saída deslocada nos registradores habilitados pelo barramento C
         cpu.writeC_Bus(busCSelection, alu_out.result);
 
-        logFile << "\tRegistradores apos a instrucao:\n";
-        dumpRegistradores(logFile, cpu, "\t\t");
+        logFile << "*******************************\n";
+        logFile << "> Registradores depois da instrução\n";
+        dumpRegistradores(logFile, cpu);
 
         cycle++;
     }
@@ -267,22 +275,164 @@ void simularEtapa2Tarefa2() {
     std::cout << "Simulacao da Etapa 2 - Tarefa 2 concluida! Log em dados/etapa2/saida_etapa2_tarefa2.txt\n";
 }
 
-int main() {
-    simularEtapa1();
-    simularEtapa2Tarefa1();
-    simularEtapa2Tarefa2();
+/**
+ * @brief Executa um único ciclo de clock para uma microinstrução de 23 bits e registra no log.
+ * 
+ * Esta função auxiliar encapsula toda a lógica de decodificação, execução combinacional
+ * (ULA + Deslocador), escrita nos barramentos e ciclo de memória para uma microinstrução.
+ * Também realiza o registro completo do estado da máquina antes e depois da execução.
+ * 
+ * @param irStr String contendo os 23 bits binários da microinstrução atual.
+ * @param cpu Referência para o objeto da microarquitetura (registradores e memória).
+ * @param logFile Referência para o stream de saída do arquivo de log.
+ * @param cycle Número do ciclo de clock atual (para identificação no log).
+ * @param dumpMemory Se verdadeiro, imprime o estado completo da memória após a execução.
+ */
+void executarMicroinstrucao(const std::string& irStr, Microarchitecture& cpu, 
+                            std::ofstream& logFile, int cycle, bool dumpMemory) {
+    logFile << "\n============================================================\n";
+    logFile << "Cycle " << cycle << "\n";
 
-    Microarchitecture cpu;
+    uint8_t ulaControl, busBSelection, memControl;
+    uint16_t busCSelection;
+
+    // Fatiamento lógico da instrução em campos específicos de hardware
+    Decoder::split23Bits(irStr, ulaControl, busCSelection, memControl, busBSelection);
+
+    uint8_t readSignal  = (memControl >> 0) & 1;
+    uint8_t writeSignal = (memControl >> 1) & 1;
+
+    // Exibição do desmembramento do Registrador de Instrução (IR) e barramentos ativos
+    logFile << "ir = " << irStr.substr(0, 8) << " " << irStr.substr(8, 9) << " " 
+            << irStr.substr(17, 2) << " " << irStr.substr(19, 4) << "\n";
+    logFile << "b = " << getBBusName(busBSelection) << "\n";
+    logFile << "c = " << getCBusNames(busCSelection) << "\n";
+
+    // LOG: Amostragem dos 10 registradores ANTES da execução combinacional
+    logFile << "*******************************\n";
+    logFile << "> Registradores antes da instrução\n";
+    dumpRegistradores(logFile, cpu);
+
+    // INÍCIO DO CLOCK COMBINACIONAL (Simulação física)
+    uint32_t b_bus_value = cpu.readB_Bus(busBSelection);
+    ALUResult alu_out;
+
+    // Interceptor do caso especial do BIPUSH fetch (Tratamento síncrono imediato de H)
+    // Os 8 bits do argumento são passados para o MBR e o valor de MBR é passado para H.
+    if (readSignal == 1 && writeSignal == 1) {
+        cpu.mbr = ulaControl;
+        cpu.h = static_cast<uint32_t>(cpu.mbr);
+        alu_out.result = cpu.h;
+    } else {
+        // Desmembramento bit a bit do bloco de 8 bits da ULA para processamento combinacional
+        uint8_t sll8 = (ulaControl >> 7) & 1;
+        uint8_t sra1 = (ulaControl >> 6) & 1;
+        uint8_t f0   = (ulaControl >> 5) & 1;
+        uint8_t f1   = (ulaControl >> 4) & 1;
+        uint8_t ena  = (ulaControl >> 3) & 1;
+        uint8_t enb  = (ulaControl >> 2) & 1;
+        uint8_t inva = (ulaControl >> 1) & 1;
+        uint8_t inc  = (ulaControl >> 0) & 1;
+
+        // Propagação de sinais no circuito combinacional da ULA e do Deslocador
+        alu_out = ALU::execute(cpu.h, b_bus_value, f0, f1, ena, enb, inva, inc, sll8, sra1);
+        
+        // Gravação síncrona nos registradores habilitados pelo Barramento C
+        cpu.writeC_Bus(busCSelection, alu_out.result);
+    }
+
+    // Ativação do ciclo de barramento de memória (Apenas se não for o caso especial)
+    if (!(readSignal == 1 && writeSignal == 1)) {
+        cpu.executeMemoryCycle(readSignal, writeSignal);
+    }
+    // FIM DO CICLO DE CLOCK
+
+    // LOG: Amostragem de TODOS os 10 registradores DEPOIS da execução e escrita nos barramentos
+    logFile << "*******************************\n";
+    logFile << "> Registradores depois da instrução\n";
+    dumpRegistradores(logFile, cpu);
+
+    // LOG: Despejo completo da memória RAM (opcional, controlado pelo parâmetro)
+    if (dumpMemory) {
+        logFile << "*******************************\n";
+        logFile << "> Memória depois da instrução\n";
+        for (uint32_t word : cpu.dataMemory) {
+            logFile << toBinStr(word, 32) << "\n";
+        }
+    }
     
+    logFile << "============================================================\n";
+}
+
+/**
+ * @brief Executa a simulação da Etapa 3 - Tarefa 1 (microinstruções de 23 bits lidas diretamente de arquivo).
+ * 
+ * Carrega o estado inicial dos registradores e da memória, lê cada microinstrução de 23 bits
+ * sequencialmente do arquivo de entrada e executa o ciclo de clock, gerando um log completo
+ * com o estado da memória após cada microinstrução.
+ * 
+ * @note O arquivo de entrada (microinstrucoes_etapa3_tarefa1.txt) será fornecido pelo professor
+ * durante a avaliação. Se não estiver presente, a função emite um aviso e retorna sem erro.
+ */
+void simularEtapa3Tarefa1() {
+    Microarchitecture cpu;
+    cpu.loadRegisters("dados/etapa3/registradores_etapa3_tarefa1.txt");
+    cpu.loadMemory("dados/etapa3/dados_etapa3_tarefa1.txt");
+
+    std::ifstream instFile("dados/etapa3/microinstrucoes_etapa3_tarefa1.txt");
+    if (!instFile.is_open()) {
+        std::cerr << "Arquivo microinstrucoes_etapa3_tarefa1.txt nao encontrado. Pulando Etapa 3 - Tarefa 1.\n";
+        return;
+    }
+    std::ofstream logFile("dados/etapa3/saida_etapa3_tarefa1.txt");
+
+    // Log: impressão do estado inicial do sistema
+    logFile << "Estado Inicial da Memoria:\n";
+    for (uint32_t word : cpu.dataMemory) {
+        logFile << "\t" << toBinStr(word, 32) << "\n";
+    }
+
+    logFile << "\nEstado Inicial dos Registradores:\n";
+    dumpRegistradores(logFile, cpu);
+
+    logFile << "\nInicio da Simulacao\n";
+
+    std::string IR;
+    int cycle = 1;
+
+    // Loop de leitura sequencial das microinstruções de 23 bits
+    while (std::getline(instFile, IR)) {
+        if (IR.empty()) continue;
+        // Executa e registra cada microinstrução com dump completo da memória
+        executarMicroinstrucao(IR, cpu, logFile, cycle, true);
+        cycle++;
+    }
+
+    logFile << "> Linha vazia, fim do programa.\n";
+    instFile.close();
+    logFile.close();
+    std::cout << "Simulacao da Etapa 3 - Tarefa 1 concluida! Log em dados/etapa3/saida_etapa3_tarefa1.txt\n";
+}
+
+/**
+ * @brief Executa a simulação do Entregável Final (Interpretador IJVM completo).
+ * 
+ * Lê macroinstruções IJVM em alto nível (DUP, BIPUSH, ILOAD) do arquivo instrucoes.txt,
+ * traduz cada uma em sequências de microinstruções de 23 bits via Translator, e executa
+ * os ciclos de clock. O log imprime a memória após cada macroinstrução completa.
+ */
+void simularEntregavel() {
+    Microarchitecture cpu;
+
     // Configura os caminhos dos arquivos locais conforme a estrutura de diretórios do repositório
     cpu.loadMemory("dados/etapa3/dados_etapa3_tarefa1.txt");
-    
+
     std::ifstream instFile("dados/etapa3/instrucoes.txt");
-    std::ofstream logFile("dados/etapa3/saida_etapa3_tarefa1.txt");
-    
+    std::ofstream logFile("dados/etapa3/saida_entregavel.txt");
+
     if (!instFile.is_open() || !logFile.is_open()) {
-        std::cerr << "Erro ao abrir os arquivos de instrução ou de log.\n";
-        return 1;
+        std::cerr << "Erro ao abrir os arquivos de instrucao ou de log do entregavel.\n";
+        return;
     }
 
     std::string ijvmLine;
@@ -293,14 +443,10 @@ int main() {
     for (uint32_t word : cpu.dataMemory) {
         logFile << "\t" << toBinStr(word, 32) << "\n";
     }
-    
+
     logFile << "\nEstado Inicial dos Registradores:\n";
-    logFile << "\tmar = " << toBinStr(cpu.mar, 32) << "\n\tmdr = " << toBinStr(cpu.mdr, 32) << "\n";
-    logFile << "\tpc  = " << toBinStr(cpu.pc, 32)  << "\n\tmbr = " << toBinStr(cpu.mbr, 8)  << "\n";
-    logFile << "\tsp  = " << toBinStr(cpu.sp, 32)  << "\n\tlv  = " << toBinStr(cpu.lv, 32)  << "\n";
-    logFile << "\tcpp = " << toBinStr(cpu.cpp, 32) << "\n\ttos = " << toBinStr(cpu.tos, 32) << "\n";
-    logFile << "\topc = " << toBinStr(cpu.opc, 32) << "\n\th   = " << toBinStr(cpu.h, 32)   << "\n";
-    
+    dumpRegistradores(logFile, cpu);
+
     logFile << "\nInicio do Programa\n";
 
     // Loop de leitura do arquivo de macroinstruções da ISA da IJVM
@@ -312,85 +458,34 @@ int main() {
 
         // Loop interno que simula os ciclos de clock rígidos para cada microinstrução
         for (const auto& irStr : microcode) {
-            logFile << "\nCiclo " << cycle << "\n";
-            
-            uint8_t ulaControl, busBSelection, memControl;
-            uint16_t busCSelection;
-            
-            // Fatiamento lógico da instrução em campos específicos de hardware
-            Decoder::split23Bits(irStr, ulaControl, busCSelection, memControl, busBSelection);
-            
-            uint8_t readSignal  = (memControl >> 0) & 1;
-            uint8_t writeSignal = (memControl >> 1) & 1;
-
-            // Exibição do desmembramento do Registrador de Instrução (IR) e barramentos ativos
-            logFile << "\tir = " << irStr.substr(0, 8) << " " << irStr.substr(8, 9) << " " 
-                    << irStr.substr(17, 2) << " " << irStr.substr(19, 4) << "\n";
-            logFile << "\tbarramento B = " << getBBusName(busBSelection) << "\n";
-            logFile << "\tbarramento C = " << getCBusNames(busCSelection) << "\n";
-
-            // LOG: Amostragem dos 10 registradores ANTES da execução combinacional
-            logFile << "\tRegistradores antes da instrucao:\n";
-            logFile << "\t\tmar = " << toBinStr(cpu.mar, 32) << "\n\t\tmdr = " << toBinStr(cpu.mdr, 32) << "\n";
-            logFile << "\t\tpc  = " << toBinStr(cpu.pc, 32)  << "\n\t\tmbr = " << toBinStr(cpu.mbr, 8)  << "\n";
-            logFile << "\t\tsp  = " << toBinStr(cpu.sp, 32)  << "\n\t\tlv  = " << toBinStr(cpu.lv, 32)  << "\n";
-            logFile << "\t\tcpp = " << toBinStr(cpu.cpp, 32) << "\n\t\ttos = " << toBinStr(cpu.tos, 32) << "\n";
-            logFile << "\t\topc = " << toBinStr(cpu.opc, 32) << "\n\t\th   = " << toBinStr(cpu.h, 32)   << "\n";
-
-            // INÍCIO DO CLOCK COMBINACIONAL (Simulação física)
-            uint32_t b_bus_value = cpu.readB_Bus(busBSelection);
-            ALUResult alu_out;
-
-            // Interceptor do caso especial do BIPUSH fetch (Tratamento síncrono imediato de H)
-            // Os 8 bits do argumento são passados para o MBR e o valor de MBR é passado para H.
-            if (readSignal == 1 && writeSignal == 1) {
-                cpu.mbr = ulaControl;
-                cpu.h = static_cast<uint32_t>(cpu.mbr);
-                alu_out.result = cpu.h;
-            } else {
-                // Desmembramento bit a bit do bloco de 8 bits da ULA para processamento combinacional
-                uint8_t sll8 = (ulaControl >> 7) & 1;
-                uint8_t sra1 = (ulaControl >> 6) & 1;
-                uint8_t f0   = (ulaControl >> 5) & 1;
-                uint8_t f1   = (ulaControl >> 4) & 1;
-                uint8_t ena  = (ulaControl >> 3) & 1;
-                uint8_t enb  = (ulaControl >> 2) & 1;
-                uint8_t inva = (ulaControl >> 1) & 1;
-                uint8_t inc  = (ulaControl >> 0) & 1;
-
-                // Propagação de sinais no circuito combinacional da ULA e do Deslocador
-                alu_out = ALU::execute(cpu.h, b_bus_value, f0, f1, ena, enb, inva, inc, sll8, sra1);
-                
-                // Gravação síncrona nos registradores habilitados pelo Barramento C
-                cpu.writeC_Bus(busCSelection, alu_out.result);
-            }
-
-            // Ativação controlled do ciclo de barramento de memória (Apenas se não for o caso especial)
-            if (!(readSignal == 1 && writeSignal == 1)) {
-                cpu.executeMemoryCycle(readSignal, writeSignal);
-            }
-            // FIM DO CICLO DE CLOCK
-
-            // LOG: Amostragem de TODOS os 10 registradores DEPOIS da execução e escrita nos barramentos
-            logFile << "\tRegistradores apos a instrucao:\n";
-            dumpRegistradores(logFile, cpu, "\t\t");
-            
+            // Executa a microinstrução sem dump de memória (será feito após a macroinstrução)
+            executarMicroinstrucao(irStr, cpu, logFile, cycle, false);
             cycle++;
         }
 
         // LOG: Despejo completo das linhas da memória RAM após execução da macroinstrução
-        logFile << "\tMemoria apos a instrucao:\n";
+        logFile << "*******************************\n";
+        logFile << "> Memória depois da instrução\n";
         for (uint32_t word : cpu.dataMemory) {
-            logFile << "\t\t" << toBinStr(word, 32) << "\n";
+            logFile << toBinStr(word, 32) << "\n";
         }
+        logFile << "============================================================\n";
     }
-    
+
     // Tratamento de finalização de fluxo de programa (EOP) conforme o gabarito
-    logFile << "\nFim do Programa.\nCiclo " << cycle << ": Nao ha mais linhas (EOP).\n";
-    
+    logFile << "> Linha vazia, fim do programa.\n";
+
     instFile.close();
     logFile.close();
-    
-    std::cout << "Simulacao concluida com sucesso! Log em portugues gerado.\n";
+
+    std::cout << "Simulacao do entregavel concluida com sucesso! Log em dados/etapa3/saida_entregavel.txt\n";
+}
+
+int main() {
+    simularEtapa1();
+    simularEtapa2Tarefa1();
+    simularEtapa2Tarefa2();
+    simularEntregavel();
+    simularEtapa3Tarefa1();
     return 0;
 }
