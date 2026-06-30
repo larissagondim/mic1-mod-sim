@@ -12,7 +12,7 @@
 Microarchitecture::Microarchitecture() {
     mar = mdr = pc = sp = lv = cpp = tos = opc = h = 0;
     mbr = 0;
-    dataMemory.resize(16, 0); // Tamanho padronizado com base nas especificações de linhas de memória
+    dataMemory.resize(8, 0); // 8 endereços de memória conforme especificação do documento
 }
 
 void Microarchitecture::loadRegisters(const std::string& filepath) {

@@ -342,8 +342,10 @@ int main() {
             ALUResult alu_out;
 
             // Interceptor do caso especial do BIPUSH fetch (Tratamento síncrono imediato de H)
+            // Os 8 bits do argumento são passados para o MBR e o valor de MBR é passado para H.
             if (readSignal == 1 && writeSignal == 1) {
-                cpu.h = ulaControl; // H é carregado diretamente com os bits do opcode (argumento)
+                cpu.mbr = ulaControl;
+                cpu.h = static_cast<uint32_t>(cpu.mbr);
                 alu_out.result = cpu.h;
             } else {
                 // Desmembramento bit a bit do bloco de 8 bits da ULA para processamento combinacional
@@ -369,19 +371,17 @@ int main() {
             }
             // FIM DO CICLO DE CLOCK
 
-            // LOG: Amostragem dos 10 registradores DEPOIS da execução e escrita nos barramentos
+            // LOG: Amostragem de TODOS os 10 registradores DEPOIS da execução e escrita nos barramentos
             logFile << "\tRegistradores apos a instrucao:\n";
-            logFile << "\t\tmar = " << toBinStr(cpu.mar, 32) << "\n\t\tmdr = " << toBinStr(cpu.mdr, 32) << "\n";
-            logFile << "\t\tsp  = " << toBinStr(cpu.sp, 32)  << "\n\t\ttos = " << toBinStr(cpu.tos, 32) << "\n";
-            logFile << "\t\th   = " << toBinStr(cpu.h, 32)   << "\n";
-
-            // LOG: Despejo completo das linhas da memória RAM atualizada ao final do ciclo
-            logFile << "\tMemoria apos a instrucao:\n";
-            for (uint32_t word : cpu.dataMemory) {
-                logFile << "\t\t" << toBinStr(word, 32) << "\n";
-            }
+            dumpRegistradores(logFile, cpu, "\t\t");
             
             cycle++;
+        }
+
+        // LOG: Despejo completo das linhas da memória RAM após execução da macroinstrução
+        logFile << "\tMemoria apos a instrucao:\n";
+        for (uint32_t word : cpu.dataMemory) {
+            logFile << "\t\t" << toBinStr(word, 32) << "\n";
         }
     }
     
