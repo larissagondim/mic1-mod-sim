@@ -29,11 +29,14 @@ mic1-simulator/
 │   ├── etapa2/
 │   │   ├── programa_etapa2_tarefa1.txt    # Entrada de 8 bits
 │   │   ├── programa_etapa2_tarefa2.txt    # Entrada de 21 bits para teste de barramentos
-│   │   └── registradores_etapa2_tarefa2.txt # Estado inicial dos registradores
+│   │   ├── registradores_etapa2_tarefa2.txt # Estado inicial dos registradores
+│   │   ├── saida_etapa2_tarefa1.txt       # Log gerado com os resultados da Tarefa 1
+│   │   └── saida_etapa2_tarefa2.txt       # Log gerado com os resultados da Tarefa 2
 │   └── etapa3/
 │       ├── dados_etapa3_tarefa1.txt       # Estado inicial da memória RAM
 │       ├── registradores_etapa3_tarefa1.txt # Estado inicial dos registradores
-│       └── instrucoes.txt                 # Instruções em alto nível da IJVM (Entrada)
+│       ├── instrucoes.txt                 # Instruções em alto nível da IJVM (Entrada)
+│       └── saida_etapa3_tarefa1.txt       # Log gerado com os resultados da Etapa 3
 │
 ├── src/                                   # Código-fonte do simulador em C++
 │   ├── ALU.hpp                            # Definição do bloco combinacional (ULA e Shifter)
@@ -66,7 +69,7 @@ mic1-simulator/
 - **Registradores**: Modela os 9 registradores de 32 bits (`MAR`, `MDR`, `PC`, `SP`, `LV`, `CPP`, `TOS`, `OPC`, `H`) e o registrador de 8 bits `MBR` utilizando tipos primitivos explícitos da `<cstdint>` (`uint32_t` e `uint8_t`).
 
 - **Barramento B**: Controlado por um decodificador de 4 bits. Ao ler o registrador `MBR`, realiza automaticamente a **extensão de sinal** replicando o bit 7, enquanto a seleção de `MBRU` realiza o preenchimento estrito com zeros à esquerda.
-
+gi
 - **Barramento C**: Controlado por um seletor de 9 bits, permitindo que múltiplos registradores sejam escritos simultaneamente com o resultado da ULA ao final do ciclo de clock.
 
 - **Ciclo de Memória**: Controlado pelos sinais de 2 bits `READ` e `WRITE`. A comunicação síncrona com a RAM ocorre indexada pelo registrador `MAR` e interage com o `MDR`, ocorrendo estritamente após a atualização dos registradores do Barramento C.
@@ -83,7 +86,7 @@ Seguindo as especificações do projeto, quando o tradutor intercepta a instruç
 | :--- | :--- | :--- |
 | Etapa 1: Circuito da ULA | Concluído | `programa_etapa1.txt` |
 | Etapa 2: Caminho de Dados | Concluído | `programa_etapa2_tarefa2.txt` |
-| Etapa 3: Subsistema de Memória | Concluído | `microinstrucoes_etapa3_tarefa1.txt` |
+| Etapa 3: Subsistema de Memória | Concluído | `instrucoes.txt` |
 | Entregável: Interpretador IJVM | Concluído | `instrucoes.txt` |
 
 ---
@@ -171,8 +174,8 @@ Para garantir a precisão cirúrgica do simulador, o sistema foi homologado com 
 | :--- | :--- | :--- | :--- | :--- |
 | **Etapa 1 (ULA)** | `programa_etapa1.txt` | N/A | `saida_etapa1.txt` | 100% Compatível |
 | **Etapa 2 (Caminho)** | `programa_etapa2_tarefa2.txt` | `registradores_etapa2_tarefa2.txt` | `saida_etapa2_tarefa2.txt` | 100% Compatível |
-| **Etapa 3 (Memória)** | `microinstrucoes_etapa3_tarefa1.txt` | `dados_etapa3_tarefa1.txt` | `saida_etapa3_tarefa1.txt` | 100% Compatível |
-| **Final (Entregável)** | `instrucoes.txt` | Multi-Carga Etapa 3 | Log Unificado (Português) | Pronto para Avaliação |
+| **Etapa 3 (Memória)** | `instrucoes.txt` | `dados_etapa3_tarefa1.txt` | `saida_etapa3_tarefa1.txt` | 100% Compatível |
+| **Final (Entregável)** | `instrucoes.txt` | Multi-Carga Etapa 3 | `saida_etapa3_tarefa1.txt` | Pronto para Avaliação |
 
 
 ---
@@ -243,7 +246,7 @@ Dentro da pasta raiz do projeto, você pode gerenciar a execução através dos 
    ```
 
 3. **Limpar o ambiente de build:**
-   Apaga o executável e limpa logs residuais antigos de execuções anteriores (`saida_etapa1.txt` e `saida_etapa3_tarefa1.txt`).
+   Apaga o executável e limpa logs residuais antigos de execuções anteriores (`saida_etapa1.txt`, `saida_etapa2_tarefa1.txt`, `saida_etapa2_tarefa2.txt` e `saida_etapa3_tarefa1.txt`).
    ```bash
    make clean
    ```
@@ -252,13 +255,17 @@ Dentro da pasta raiz do projeto, você pode gerenciar a execução através dos 
 
 ## Formato dos Logs de Saída
 
-Ao rodar a simulação, dois arquivos de saída serão gerados em **português** utilizando recuos de tabulação (`\t`) para uma visualização clara e legível da hierarquia de hardware:
+Ao rodar a simulação, quatro arquivos de saída serão gerados em **português** utilizando recuos de tabulação (`\t`) para uma visualização clara e legível da hierarquia de hardware:
 
 ### 1. Log da Etapa 1 (`dados/etapa1/saida_etapa1.txt`)
 - Registra a validação isolada da ULA combinacional.
 - Para cada instrução de 6 bits executada, anota de forma limpa: `IR`, `PC`, `A`, `B`, `S` (Resultado final) e `Vai-um`.
 
-### 2. Log da Etapa 3 (`dados/etapa3/saida_etapa3_tarefa1.txt`)
+### 2. Logs da Etapa 2
+- **Tarefa 1 (`dados/etapa2/saida_etapa2_tarefa1.txt`)**: Registra a simulação da ULA de 8 bits, demonstrando saídas deslocadas e o status das flags `N` e `Z`.
+- **Tarefa 2 (`dados/etapa2/saida_etapa2_tarefa2.txt`)**: Registra o comportamento do caminho de dados e registradores com instruções de 21 bits.
+
+### 3. Log da Etapa 3 (`dados/etapa3/saida_etapa3_tarefa1.txt`)
 - Estado inicial completo da memória RAM e de todos os 10 registradores.
 - **Por Ciclo de Execução:**
   - Palavra do Registrador de Instrução (`ir`) desmembrada.
