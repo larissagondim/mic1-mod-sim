@@ -76,7 +76,7 @@ gi
 
 ### 3. Caso Especial: BIPUSH Fetch
 
-Seguindo as especificações do projeto, quando o tradutor intercepta a instrução `BIPUSH byte`, a segunda microinstrução ativa os sinais `READ` e `WRITE` simultaneamente (`11`). O simulador desvia do fluxo tradicional da ULA, fazendo com que o registrador `H` absorva imediatamente os 8 bits mais significativos do `IR` (o argumento `byte`), estendendo-o com zeros.
+Seguindo as especificações do projeto, quando o tradutor intercepta a instrução `BIPUSH byte`, a segunda microinstrução ativa os sinais `READ` e `WRITE` simultaneamente (`11`). O simulador desvia do fluxo tradicional da ULA, fazendo com que o registrador `MBR` absorva imediatamente os 8 bits mais significativos do `IR` (o argumento `byte`), e em seguida o repasse para o registrador `H`, estendendo-o com zeros.
 
 ## Status do Projeto
 
@@ -114,7 +114,7 @@ Seguindo as especificações do projeto, quando o tradutor intercepta a instruç
 
 **Fase 3: Subsistema de Memória RAM (`src/Microarchitecture.cpp`)**
 
-- Acoplamento do vetor de memória principal (`dataMemory`) com capacidade para armazenar palavras de dados de 32 bits.
+- Acoplamento do vetor de memória principal (`dataMemory`) com capacidade para 8 endereços, armazenando palavras de dados de 32 bits.
 - Implementação dos métodos de leitura (`READ`) e escrita (`WRITE`) controlados por sinais de 2 bits vindos do `IR`.
 - Garantia de sincronização elétrica: ciclos de memória ocorrem estritamente após a escrita nos registradores do barramento C.
 - Ajuste do fatiador em `Decoder.hpp` para extrair e interpretar palavras de controle expandidas de 23 bits.
@@ -123,7 +123,8 @@ Seguindo as especificações do projeto, quando o tradutor intercepta a instruç
 
 - Codificação das regras de substituição em `Translator.hpp` para converter strings em mnemônicos (`DUP`, `BIPUSH`, `ILOAD`) em microinstruções binárias.
 - Suporte ao laço dinâmico para a instrução `ILOAD x`, gerando `x` repetições de incrementos do registrador `H`.
-- Tratamento do caso especial de Fetch combinado para a instrução `BIPUSH byte`, injetando o operando direto em `H` quando `READ` e `WRITE` forem ativados simultaneamente (`11`).
+- Tratamento do caso especial de Fetch combinado para a instrução `BIPUSH byte`, passando o operando pelo registrador `MBR` e injetando em `H` quando `READ` e `WRITE` forem ativados simultaneamente (`11`).
+- Correção de mapeamentos bit a bit de todos os barramentos (B e C), controle de ULA e controle de Memória (READ/WRITE) nas microinstruções dinâmicas, garantindo precisão total de leitura e escrita.
 - Orquestração unificada no `main.cpp`, executando primeiro a simulação autônoma da Etapa 1 (`saida_etapa1.txt`) e em seguida o interpretador IJVM completo (`saida_etapa3_tarefa1.txt`), com logs estruturados por tabulações em português.
 
 ---
@@ -271,5 +272,6 @@ Ao rodar a simulação, quatro arquivos de saída serão gerados em **português
   - Palavra do Registrador de Instrução (`ir`) desmembrada.
   - Estado do chaveamento dos Barramentos B e C.
   - Estado de todos os 10 registradores **antes** do clock combinacional.
-  - Estado dos registradores atualizados **após** a borda de subida do clock.
-  - Dump completo das linhas da memória RAM atualizadas após o ciclo de escrita/leitura.
+  - Estado de todos os 10 registradores atualizados **após** a borda de subida do clock.
+- **Ao Final de Cada Macroinstrução:**
+  - Dump completo das 8 linhas da memória RAM para validação final do estado após a instrução IJVM completa.
