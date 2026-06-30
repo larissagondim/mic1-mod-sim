@@ -425,6 +425,7 @@ void simularEntregavel() {
     Microarchitecture cpu;
 
     // Configura os caminhos dos arquivos locais conforme a estrutura de diretórios do repositório
+    cpu.loadRegisters("dados/etapa3/registradores_etapa3_tarefa1.txt");
     cpu.loadMemory("dados/etapa3/dados_etapa3_tarefa1.txt");
 
     std::ifstream instFile("dados/etapa3/instrucoes.txt");
