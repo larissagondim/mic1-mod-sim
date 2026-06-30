@@ -50,7 +50,7 @@ Essa classe representa os registradores, a memória RAM e os barramentos utiliza
 As principais funções são:
 
 * Inicializar todos os registradores e a memória.
-* Carregar o conteúdo inicial da RAM a partir de um arquivo.
+* Carregar o conteúdo inicial da RAM e dos registradores a partir de arquivos (com suporte flexível ao formato `nome = valor` ou apenas binários sequenciais).
 * Selecionar qual registrador será colocado no barramento B.
 * Escrever o resultado da ULA nos registradores indicados pelo barramento C.
 * Executar as operações de leitura e escrita na memória.
@@ -98,26 +98,26 @@ Arquivo:
 
 * main.cpp
 
-O arquivo `main.cpp` coordena toda a execução do simulador.
+O arquivo `main.cpp` coordena toda a execução do simulador através de chamadas sequenciais para testar progressivamente cada componente:
 
-Primeiro é executada a etapa de testes da ULA utilizando o arquivo da etapa 1.
+1. **Etapa 1:** Testa a ULA isolada lendo sinais básicos de 6 bits.
+2. **Etapa 2 - Tarefa 1:** Valida a ULA acoplada ao deslocador e as flags matemáticas usando sinais de 8 bits.
+3. **Etapa 2 - Tarefa 2:** Simula o caminho de dados completo com Barramentos B e C (instruções de 21 bits), mas sem tráfego de memória.
+4. **Entregável Final (IJVM):** Lê o código de alto nível (`BIPUSH`, `DUP`, `ILOAD`). O `Translator` converte os mnemônicos em microcódigo, e a função `executarMicroinstrucao()` aplica os ciclos de clock registrando as mudanças de memória ao final de cada macroinstrução.
+5. **Etapa 3 - Tarefa 1:** Simulação autônoma que consome diretamente instruções binárias de 23 bits, fazendo despejo (dump) da memória a cada microinstrução individual executada.
 
-Depois, o simulador inicializa a arquitetura, carrega a memória e começa a ler as instruções da IJVM.
+Durante a simulação principal, o orquestrador encapsulado em `executarMicroinstrucao()` realiza o seguinte fluxo para cada instrução de 23 bits:
 
-Cada instrução é enviada ao `Translator`, que retorna a sequência de microinstruções correspondente.
+* O `Decoder` separa os sinais de controle lógicos.
+* O barramento B seleciona e fornece o operando para a ULA.
+* A ULA executa a operação matemática, passando pelo Deslocador (Shifter).
+* O resultado elétrico é gravado de forma síncrona nos registradores indicados pelo Barramento C.
+* O ciclo de memória (`READ`/`WRITE`) ocorre após a gravação dos registradores.
+* O estado completo da máquina (todos os 10 registradores e barramentos) é capturado, formatado rigorosamente com cabeçalhos padronizados e salvo nos respectivos logs (ex: `saida_entregavel.txt`).
 
-Para cada microinstrução:
+Há um interceptor de hardware modelado exclusivamente para o *fetch* especial do `BIPUSH`, onde os sinais simultâneos de `READ` e `WRITE` (11) fazem com que o operando seja retido no `MBR` e transferido diretamente ao registrador `H`.
 
-* O `Decoder` separa os sinais de controle.
-* O barramento B fornece o operando para a ULA.
-* A ULA executa a operação.
-* O resultado é gravado nos registradores indicados.
-* O ciclo de memória é executado quando necessário.
-* O estado da máquina é registrado no arquivo de saída.
-
-Existe um tratamento específico para a instrução `BIPUSH`, em que o valor imediato é carregado diretamente no registrador `H`, sem passar pela ULA.
-
-Ao final da execução, o simulador grava o estado final da memória e encerra o programa.
+Ao final da execução de todos os lotes, os logs de saída fornecem rastreabilidade completa das operações para auditoria de gabarito.
 
 ---
 
