@@ -126,9 +126,152 @@ void simularEtapa1() {
     std::cout << "Simulacao da Etapa 1 concluida com sucesso! Log gerado em dados/etapa1/saida_etapa1.txt\n";
 }
 
+/**
+ * @brief Executa a simulação da Etapa 2 - Tarefa 1 (ULA de 8 bits com deslocador e flags N/Z).
+ * Lê o arquivo programa_etapa2_tarefa1.txt de 8 bits e gera o log saida_etapa2_tarefa1.txt.
+ */
+void simularEtapa2Tarefa1() {
+    std::ifstream instFile("dados/etapa2/programa_etapa2_tarefa1.txt");
+    std::ofstream logFile("dados/etapa2/saida_etapa2_tarefa1.txt");
+
+    if (!instFile.is_open() || !logFile.is_open()) {
+        std::cerr << "Erro ao abrir os arquivos da Etapa 2 - Tarefa 1.\n";
+        return;
+    }
+
+    // Mesma convenção da Etapa 1: A e B fixos para testar a ULA isolada.
+    uint32_t A = 1;
+    uint32_t B = 1;
+    uint32_t PC = 1;
+    std::string IR;
+
+    logFile << "Simulacao da Etapa 2 - Tarefa 1 (ULA de 8 bits: SLL8 SRA1 F0 F1 ENA ENB INVA INC)\n";
+    logFile << "Valores iniciais: A = " << A << ", B = " << B << "\n\n";
+
+    while (std::getline(instFile, IR)) {
+        if (IR.empty()) continue;
+
+        // Decodificação da palavra de 8 bits: SLL8 SRA1 F0 F1 ENA ENB INVA INC
+        uint8_t sll8 = IR[0] - '0';
+        uint8_t sra1 = IR[1] - '0';
+        uint8_t f0   = IR[2] - '0';
+        uint8_t f1   = IR[3] - '0';
+        uint8_t ena  = IR[4] - '0';
+        uint8_t enb  = IR[5] - '0';
+        uint8_t inva = IR[6] - '0';
+        uint8_t inc  = IR[7] - '0';
+
+        // Execução da ULA combinacional com o deslocador (Sd) e as flags N e Z
+        ALUResult alu_out = ALU::execute(A, B, f0, f1, ena, enb, inva, inc, sll8, sra1);
+
+        // Saídas exigidas pela Tarefa 1: Sd (saída deslocada), Vai-um, N e Z
+        logFile << "Linha " << PC << " (PC = " << PC << "):\n";
+        logFile << "\tIR = " << IR << "\n";
+        logFile << "\tPC = " << PC << "\n";
+        logFile << "\tA  = " << toBinStr(A, 32) << " (" << static_cast<int32_t>(A) << ")\n";
+        logFile << "\tB  = " << toBinStr(B, 32) << " (" << static_cast<int32_t>(B) << ")\n";
+        logFile << "\tSd = " << toBinStr(alu_out.result, 32) << " (" << static_cast<int32_t>(alu_out.result) << ")\n";
+        logFile << "\tVai-um = " << static_cast<int>(alu_out.carryOut) << "\n";
+        logFile << "\tN = " << static_cast<int>(alu_out.flagN) << "\n";
+        logFile << "\tZ = " << static_cast<int>(alu_out.flagZ) << "\n\n";
+
+        PC++;
+    }
+
+    logFile << "Fim da simulacao da Etapa 2 - Tarefa 1.\n";
+    instFile.close();
+    logFile.close();
+    std::cout << "Simulacao da Etapa 2 - Tarefa 1 concluida! Log em dados/etapa2/saida_etapa2_tarefa1.txt\n";
+}
+
+/**
+ * @brief Imprime no log o estado dos 10 registradores da Mic-1 com a indentação informada.
+ */
+void dumpRegistradores(std::ofstream& logFile, const Microarchitecture& cpu, const std::string& tab) {
+    logFile << tab << "h   = " << toBinStr(cpu.h, 32)   << "\n" << tab << "opc = " << toBinStr(cpu.opc, 32) << "\n";
+    logFile << tab << "tos = " << toBinStr(cpu.tos, 32) << "\n" << tab << "cpp = " << toBinStr(cpu.cpp, 32) << "\n";
+    logFile << tab << "lv  = " << toBinStr(cpu.lv, 32)  << "\n" << tab << "sp  = " << toBinStr(cpu.sp, 32)  << "\n";
+    logFile << tab << "mbr = " << toBinStr(cpu.mbr, 8)  << "\n" << tab << "pc  = " << toBinStr(cpu.pc, 32)  << "\n";
+    logFile << tab << "mdr = " << toBinStr(cpu.mdr, 32) << "\n" << tab << "mar = " << toBinStr(cpu.mar, 32) << "\n";
+}
+
+/**
+ * @brief Executa a simulação da Etapa 2 - Tarefa 2 (caminho de dados, instruções de 21 bits).
+ * Lê o estado inicial dos registradores e o programa de 21 bits, sem acesso à memória.
+ * Gera o log saida_etapa2_tarefa2.txt com os registradores antes/depois de cada instrução.
+ */
+void simularEtapa2Tarefa2() {
+    Microarchitecture cpu;
+    cpu.loadRegisters("dados/etapa2/registradores_etapa2_tarefa2.txt");
+
+    std::ifstream instFile("dados/etapa2/programa_etapa2_tarefa2.txt");
+    std::ofstream logFile("dados/etapa2/saida_etapa2_tarefa2.txt");
+
+    if (!instFile.is_open() || !logFile.is_open()) {
+        std::cerr << "Erro ao abrir os arquivos da Etapa 2 - Tarefa 2.\n";
+        return;
+    }
+
+    logFile << "Simulacao da Etapa 2 - Tarefa 2 (Caminho de dados, instrucoes de 21 bits)\n";
+    logFile << "Formato da instrucao: Controle da ULA (8) | Barramento C (9) | Barramento B (4)\n";
+
+    logFile << "\nEstado Inicial dos Registradores:\n";
+    dumpRegistradores(logFile, cpu, "\t");
+
+    std::string IR;
+    int cycle = 1;
+
+    while (std::getline(instFile, IR)) {
+        if (IR.empty()) continue;
+
+        uint8_t ulaControl, busBSelection;
+        uint16_t busCSelection;
+
+        // Fatiamento da instrução de 21 bits (sem campo de memória)
+        Decoder::split21Bits(IR, ulaControl, busCSelection, busBSelection);
+
+        logFile << "\nInstrucao " << cycle << "\n";
+        logFile << "\tir = " << IR.substr(0, 8) << " " << IR.substr(8, 9) << " " << IR.substr(17, 4) << "\n";
+        logFile << "\tbarramento B = " << getBBusName(busBSelection) << "\n";
+        logFile << "\tbarramento C = " << getCBusNames(busCSelection) << "\n";
+
+        logFile << "\tRegistradores antes da instrucao:\n";
+        dumpRegistradores(logFile, cpu, "\t\t");
+
+        // Caminho de dados: A = H sempre; B = registrador no barramento B
+        uint32_t b_bus_value = cpu.readB_Bus(busBSelection);
+
+        uint8_t sll8 = (ulaControl >> 7) & 1;
+        uint8_t sra1 = (ulaControl >> 6) & 1;
+        uint8_t f0   = (ulaControl >> 5) & 1;
+        uint8_t f1   = (ulaControl >> 4) & 1;
+        uint8_t ena  = (ulaControl >> 3) & 1;
+        uint8_t enb  = (ulaControl >> 2) & 1;
+        uint8_t inva = (ulaControl >> 1) & 1;
+        uint8_t inc  = (ulaControl >> 0) & 1;
+
+        ALUResult alu_out = ALU::execute(cpu.h, b_bus_value, f0, f1, ena, enb, inva, inc, sll8, sra1);
+
+        // Escrita da saída deslocada nos registradores habilitados pelo barramento C
+        cpu.writeC_Bus(busCSelection, alu_out.result);
+
+        logFile << "\tRegistradores apos a instrucao:\n";
+        dumpRegistradores(logFile, cpu, "\t\t");
+
+        cycle++;
+    }
+
+    logFile << "\nFim da simulacao da Etapa 2 - Tarefa 2.\n";
+    instFile.close();
+    logFile.close();
+    std::cout << "Simulacao da Etapa 2 - Tarefa 2 concluida! Log em dados/etapa2/saida_etapa2_tarefa2.txt\n";
+}
+
 int main() {
     simularEtapa1();
-    
+    simularEtapa2Tarefa1();
+    simularEtapa2Tarefa2();
+
     Microarchitecture cpu;
     
     // Configura os caminhos dos arquivos locais conforme a estrutura de diretórios do repositório

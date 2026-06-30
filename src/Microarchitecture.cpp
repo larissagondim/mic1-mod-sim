@@ -15,6 +15,27 @@ Microarchitecture::Microarchitecture() {
     dataMemory.resize(16, 0); // Tamanho padronizado com base nas especificações de linhas de memória
 }
 
+void Microarchitecture::loadRegisters(const std::string& filepath) {
+    std::ifstream file(filepath);
+    std::string line;
+
+    // Ordem fixa do arquivo de estado inicial (um valor binario por linha):
+    // H, OPC, TOS, CPP, LV, SP, PC, MDR, MAR e, por fim, MBR (8 bits).
+    uint32_t* ordem[] = {&h, &opc, &tos, &cpp, &lv, &sp, &pc, &mdr, &mar};
+    size_t idx = 0;
+
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+
+        if (idx < 9) {
+            *ordem[idx] = std::stoul(line, nullptr, 2); // registradores de 32 bits
+        } else if (idx == 9) {
+            mbr = static_cast<uint8_t>(std::stoul(line, nullptr, 2)); // MBR de 8 bits
+        }
+        idx++;
+    }
+}
+
 void Microarchitecture::loadMemory(const std::string& filepath) {
     std::ifstream file(filepath);
     std::string line;

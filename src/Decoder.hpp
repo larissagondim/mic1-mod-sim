@@ -35,6 +35,21 @@ public:
         mem  = static_cast<uint8_t>(std::stoi(irStr.substr(17, 2), nullptr, 2));
         busB = static_cast<uint8_t>(std::stoi(irStr.substr(19, 4), nullptr, 2));
     }
+
+    /**
+     * @brief Desmembra uma string binária de 21 bits (formato da Etapa 2) nos sinais de controle.
+     * * Diferente do formato de 23 bits, a palavra da Etapa 2 não possui o campo de memória,
+     * sendo organizada como: Controle da ULA (8 bits) | Barramento C (9 bits) | Barramento B (4 bits).
+     * * @param irStr String contendo os 21 bits binários da microinstrução atual.
+     * @param ula Referência para armazenar os 8 bits de controle destinados à ULA e ao Shifter.
+     * @param busC Referência para armazenar os 9 bits de habilitação de escrita do Barramento C.
+     * @param busB Referência para armazenar os 4 bits de seleção de leitura do Barramento B.
+     */
+    static void split21Bits(const std::string& irStr, uint8_t& ula, uint16_t& busC, uint8_t& busB) {
+        ula  = static_cast<uint8_t>(std::stoi(irStr.substr(0, 8),  nullptr, 2));
+        busC = static_cast<uint16_t>(std::stoi(irStr.substr(8, 9),  nullptr, 2));
+        busB = static_cast<uint8_t>(std::stoi(irStr.substr(17, 4), nullptr, 2));
+    }
 };
 
 #endif
