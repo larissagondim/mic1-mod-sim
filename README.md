@@ -260,3 +260,13 @@ Ao rodar a simulação, quatro arquivos de saída serão gerados em **português
   - Estado de todos os 10 registradores **antes** e **após** o clock combinacional.
 - **Ao Final de Cada Macroinstrução:**
   - Dump completo das 8 linhas da memória RAM para validação final do estado após a instrução IJVM completa.
+
+### Divergências
+
+Há três principais inconsistências em relação às orientações do projeto:
+
+- O enunciado pede um deslocamento de 8 bit, que foi devidamente implementado. O valor nas orientações do projeto, entretanto, sugere um deslocamento de 9 bits, o que não faz sentido;
+
+- Na verificação da flag N, observamos que as orientações do projeto tem um comportamento que desconsidera o bit de sinal em uma situação específica, o que difere da nossa implementação, que se comporta conforme a definição formal de complemento de dois;
+
+- Identificamos uma discrepância crítica na implementação de MBR e MBRU entre o texto do PDF e o gabarito. O PDF segue a convenção clássica (Sign-Extend para MBR e Zero-Fill para MBRU). No entanto, para garantir compatibilidade com o arquivo de saída, ajustamos o nosso código para seguir a convenção invertida presente no gabarito;
